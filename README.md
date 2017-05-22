@@ -11,7 +11,8 @@ Copy ``build.sh`` to your project, make it executable with running
 ```sh
 $ chmod +x build.sh
 ```
-If you want run custom npm script, it must be in directory where is package.json defined or in child directory where is available npm run.
+If you want to run custom npm script, it must be in directory where is package.json defined or in child directory where is available npm run.
+
 **Warning:** Before running a script, you must add script to your .gitignore in both branches (master/develop).
 
 ### Usage
