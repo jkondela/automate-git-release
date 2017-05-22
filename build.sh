@@ -75,13 +75,24 @@ my_name=$(basename "$0")
 # issue if self (build.sh) is not ignored by git
 check_ignore_self() {
 	git check-ignore $my_name -q >/dev/null 2>&1
-	exit
+
 	if [ $? -eq 1 ]; then
 		echo -e "${RED}You must add this script to .gitignore because of fatal issues.\n\rIt must be in develop branch and master too.${NC}"
 		exit
 	fi
 }
 
+print_action() {
+	echo -e -n "$1 "
+}
+
+print_ok() {
+	echo -e " ${LIGHT_GREEN}OK$NC"
+}
+
+print_error() {
+	echo -e " ${RED}ERROR$NC"
+}
 
 print_noclean_tree_msg() {
 	echo -e "${RED}You have uncommited files${NC}\n"
@@ -103,17 +114,6 @@ verify_clean_working_tree() {
 	return $valid
 }
 
-print_action() {
-	echo -e -n "$1 "
-}
-
-print_ok() {
-	echo -e " ${LIGHT_GREEN}OK$NC"
-}
-
-print_error() {
-	echo -e " ${RED}ERROR$NC"
-}
 
 verify_clean_working_tree
 result=$?
@@ -122,36 +122,45 @@ if [ $result -eq 0 ]; then
 	echo -e "${LIGHT_GREEN}Starting release${NC}"
 
 	if git show-branch release > /dev/null 2>&1; then
-		print_action 'Release branch exists... force removing'
+		print_action 'Removing existing release branch'
 		git branch -D release > /dev/null 2>&1
 		print_ok
 	fi
 
-	if [ $merge_from_feature ]; then
+	if [ $merge_from_feature -eq 1 ]; then
+		print_action 'Checkout feature branch'
 		git show-branch $feature > /dev/null 2>&1
 		# git returns 128 if branch does not exist
 		if [ $? -eq 128 ]; then
+			print_error
 			echo -e "${RED}Feature branch '${feature} does no exists'$NC"
 			exit
 		fi
-
+		print_ok
 		git checkout $feature > /dev/null 2>&1
 		check_ignore_self
 	fi
-
+	
 	git checkout develop > /dev/null 2>&1
 	check_ignore_self
+
+	print_action 'Pulling develop'
 	git pull origin develop > /dev/null 2>&1
 	if [ $? -eq 1 ]; then
+		print_error
 		echo -e "${RED}\nError occured when pulling from server (possible merge conflicts) - resolve manualy${NC}"
 		exit
 	fi
+	print_ok
 
 	if [ $merge_from_feature ]; then
+		print_action 'Merging feature'
 		git merge $feature > /dev/null 2>&1
 		if [ $? -eq 1 ]; then
+			print_error
 			echo -e "${RED}\nError occured - possible merge conflicts${NC}"
-		fi	
+		fi
+		print_ok
 	fi
 	
 	if [ $run_npm_build ]; then
@@ -167,6 +176,8 @@ if [ $result -eq 0 ]; then
 
 		print_ok
 
+		print_action 'Staging changes from build'
+		print_ok
 		git add . > /dev/null 2>&1
 		commit_cmd="git commit -m '$commit_msg' > /dev/null 2>&1"
 		print_action 'Commiting npm build'
@@ -175,23 +186,28 @@ if [ $result -eq 0 ]; then
 	fi
 	
 	
-
 	git checkout master > /dev/null 2>&1
 	check_ignore_self
 	if [ $? -eq 0 ]; then
 
+		print_action 'Pulling master'
 		git pull origin master > /dev/null 2>&1
 		if [ $? -eq 1 ]; then
+			print_error
 			echo -e "${RED}\nError occured when pulling from server (possible merge conflicts) - resolve manualy${NC}"
 			exit
 		fi
+		print_ok
 
 		if [ $run_npm_build ]; then
+			print_action 'Merging feature'
 			git merge release > /dev/null 2>&1
 			if [ $? -eq 1 ]; then
+				print_error
 				echo -e "${RED}\nError occured - possible merge conflicts${NC}"
 				exit
 			fi
+			print_ok
 
 			git checkout develop > /dev/null 2>&1
 
