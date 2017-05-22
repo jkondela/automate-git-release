@@ -1,5 +1,6 @@
 #!/bin/bash
-# Author Jaro Kondela
+# Author Jaroslav Kondela
+# License MIT 2017 Jaroslav Kondela
 
 # constants
 LIGHT_GREEN='\033[0;32m'
