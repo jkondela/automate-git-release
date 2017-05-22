@@ -1,5 +1,5 @@
 # Automate GIT release
-[![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT) ![Version: 1.0.0](https://img.shields.io/badge/version-1.0.0-brightgreen.svg) [![GitHub issues](https://img.shields.io/github/issues/jkondela/automate-git-release.svg)](https://github.com/jkondela/automate-git-release/issues)
+[![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT) [![GitHub release](https://img.shields.io/github/release/jkondela/automate-git-release.svg)]() [![GitHub issues](https://img.shields.io/github/issues/jkondela/automate-git-release.svg)](https://github.com/jkondela/automate-git-release/issues)
 
 Automate daily git release based on [Gitflow workflow](http://nvie.com/posts/a-successful-git-branching-model/).
 It merges feature branch to develop, pulls changes, creates middle branch for release, runs npm script for building, auto commits changes, merges to develop/master and pushes to remote.
@@ -25,7 +25,7 @@ See below for explain each command.
 
 ```sh
 $ ./build.sh -v
-$ 1.0.0
+$ 1.1.1
 ```
 
 ```sh
