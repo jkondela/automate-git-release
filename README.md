@@ -1,5 +1,5 @@
 # Automate GIT release
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://opensource.org/licenses/BSD-3-Clause) ![Version: 1.0.0](https://img.shields.io/badge/version-1.0.0-brightgreen.svg) [![Bitbucket issues](https://img.shields.io/bitbucket/issues/jkondela/automate-git-release.svg)](https://bitbucket.org/jkondela/automate-git-release/issues?status=new&status=open)
+[![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT) ![Version: 1.0.0](https://img.shields.io/badge/version-1.0.0-brightgreen.svg) [![GitHub issues](https://img.shields.io/github/issues/jkondela/automate-git-release.svg)](https://github.com/jkondela/automate-git-release/issues)
 
 Automate daily git release based on [Gitflow workflow](http://nvie.com/posts/a-successful-git-branching-model/).
 It merges feature branch to develop, pulls changes, creates middle branch for release, runs npm script for building, auto commits changes, merges to develop/master and pushes to remote.
@@ -50,8 +50,8 @@ $ ./build.sh -c 'ADDED: new webpack build' # message for commit if release branc
 Default commit message: ``ADDED: new build``
 
 ### Contributing
-Create [new issue](https://bitbucket.org/jkondela/automate-git-release/issues?status=new&status=open).
+Create [new issue](https://github.com/jkondela/automate-git-release/issues/new).
 
 ### License
-BSD 3-Clause
+MIT
 
