@@ -3,6 +3,7 @@
 
 Automate daily git release based on [Gitflow workflow](http://nvie.com/posts/a-successful-git-branching-model/).
 It merges feature branch to develop, pulls changes, creates middle branch for release, runs npm script for building, auto commits changes, merges to develop/master and pushes to remote.
+There is no need to add script to your ``.gitignore`` because with first run it will automatically add to gitignore on each branch.
 
 Why? For saving time and instantly releases.
 
@@ -13,7 +14,6 @@ $ chmod +x build.sh
 ```
 If you want to run custom npm script, it must be in directory where is package.json defined or in child directory where is available npm run.
 
-**Warning:** Before running a script, you must add script to your .gitignore in both branches (master/develop).
 
 ### Usage
 ```sh
