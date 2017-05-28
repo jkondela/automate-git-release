@@ -63,6 +63,7 @@ while getopts ":phf:r:c:v" opt; do
 done
 
 
+echo -e "${LIGHT_GREEN}Preparing...$NC"
 
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
 	echo -e "${RED}There is no git repo. Aborting...${NC}"
@@ -72,15 +73,35 @@ fi
 
 my_name=$(basename "$0")
 
+find_gitignore() {
+	local path="$(git rev-parse --show-toplevel)"
+	echo "${path}/.gitignore"
+}
+
 # issue if self (build.sh) is not ignored by git
+# firstly check if is ignored, if not -> install
+# add to gitignore and commit it
 check_ignore_self() {
 	git check-ignore $my_name -q >/dev/null 2>&1
 
 	if [ $? -eq 1 ]; then
-		echo -e "${RED}You must add this script to .gitignore because of fatal issues.\n\rIt must be in develop branch and master too.${NC}"
-		exit
+		if [ -n "$1" ]; then
+			print_action 'Performing first run install'
+		fi
+		gitignore_path="$(find_gitignore)"
+		if [ -w $gitignore_path]; then
+			echo -e "\n${my_name}" >> $gitignore_path
+			
+			git add $gitignore_path >/dev/null 2>&1
+			git commit -m 'ADDED: ignoring build script' >/dev/null 2>&1
+			
+			if [ -n "$1" ]; then	
+				print_ok
+			fi
+		fi
 	fi
 }
+
 
 print_action() {
 	echo -e -n "$1 "
@@ -114,6 +135,9 @@ verify_clean_working_tree() {
 	return $valid
 }
 
+# run before verify clean working copy 
+# because of first run installation of gitignore
+check_ignore_self 1
 
 verify_clean_working_tree
 result=$?
