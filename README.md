@@ -26,7 +26,7 @@ See below for explain each command.
 
 ```sh
 $ ./build.sh -v
-$ 1.1.1
+$ 1.2.0
 ```
 
 ```sh
