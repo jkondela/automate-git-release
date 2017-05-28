@@ -65,6 +65,18 @@ done
 
 echo -e "${LIGHT_GREEN}Preparing...$NC"
 
+
+check_git() {
+	which --skip-functions --skip-alias git >/dev/null 2>&1
+	if [ $? -eq 1 ]; then
+		echo -e "${RED}Git was not found in PATH.\nPlease, firstly install git from https://git-scm.com/downloads${NC}"		
+		exit
+	fi
+}
+
+check_git
+
+
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
 	echo -e "${RED}There is no git repo. Aborting...${NC}"
 	exit
