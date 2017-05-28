@@ -13,6 +13,8 @@ push=0
 merge_from_feature=0
 run_npm_build=0
 commit_msg='ADDED: new build'
+checkout_after_done=0
+
 
 help=$(cat <<-END
 Automate GIT release\n
@@ -24,6 +26,7 @@ Automate GIT release\n
 \r\n${LIGHT_GREEN}-f [branch-name] ${NC} for merge feature branch to develop
 \r\n${LIGHT_GREEN}-r [npm-script-name] ${NC}   script name from npm scripts for run (example: build = npm run build)
 \r\n${LIGHT_GREEN}-c [commit-message] ${NC} message for commit if release branch is active (runnable only with -r command)
+\r\n${LIGHT_GREEN}-n [branch-name] ${NC} after build checkout to [branch-name], if does not exist, it will be firstly created
 \r\n\nExample:
 \r\n${LIGHT_GREEN}./build.sh -p -f feature/checkout -r build$NC
 \r\nThis firstly does merge of branch 'feature/checkout' to develop,
@@ -31,7 +34,7 @@ Automate GIT release\n
 END
 )
 
-while getopts ":phf:r:c:v" opt; do
+while getopts ":phf:r:c:vn:" opt; do
 	case $opt in
 		p)
 			push=1
@@ -54,6 +57,10 @@ while getopts ":phf:r:c:v" opt; do
 			;;
 		c)
 			commit_msg=$OPTARG
+			;;
+		n)
+			checkout_after_done=1
+			checkout_branch_after_done=$OPTARG
 			;;
 		?)
 			echo -e "${RED}Invalid command '$OPTARG'. Run with -h to see help${NC}"
@@ -146,6 +153,27 @@ verify_clean_working_tree() {
 	
 	return $valid
 }
+
+
+perform_checkout_with_create() {
+	local branch_name=$1
+
+	print_action "Checkouting to branch ${branch_name}"
+	if git show-branch $branch_name > /dev/null 2>&1; then
+		git checkout $branch_name > /dev/null 2>&1
+	else
+		git checkout -b $branch_name > /dev/null 2>&1
+	fi
+
+	if [ $? -eq 1 ]; then
+		print_error
+		return 1
+	else
+		print_ok
+		return 0
+	fi
+}
+
 
 # run before verify clean working copy 
 # because of first run installation of gitignore
@@ -272,6 +300,10 @@ if [ $result -eq 0 ]; then
 			exit
 		fi
 		print_ok
+	fi
+
+	if [ $checkout_after_done -eq 1 ]; then
+		perform_checkout_with_create $checkout_branch_after_done
 	fi
 
 
