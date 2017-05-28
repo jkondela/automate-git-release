@@ -191,7 +191,7 @@ if [ $result -eq 0 ]; then
 		print_ok
 	fi
 
-	if [ $merge_from_feature -eq 1 ]; then
+	if [ $merge_from_feature -eq 1 -eq 1 ]; then
 		print_action 'Checkout feature branch'
 		git show-branch $feature > /dev/null 2>&1
 		# git returns 128 if branch does not exist
@@ -217,7 +217,7 @@ if [ $result -eq 0 ]; then
 	fi
 	print_ok
 
-	if [ $merge_from_feature ]; then
+	if [ $merge_from_feature -eq 1 ]; then
 		print_action 'Merging feature'
 		git merge $feature > /dev/null 2>&1
 		if [ $? -eq 1 ]; then
@@ -227,7 +227,7 @@ if [ $result -eq 0 ]; then
 		print_ok
 	fi
 	
-	if [ $run_npm_build ]; then
+	if [ $run_npm_build -eq 1 ]; then
 		git checkout -b release > /dev/null 2>&1
 
 		print_action "Running npm script"
