@@ -7,7 +7,7 @@ LIGHT_GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No color
 
-VERSION='1.2.0'
+VERSION='1.2.1'
 
 push=0
 merge_from_feature=0
@@ -191,7 +191,7 @@ if [ $result -eq 0 ]; then
 		print_ok
 	fi
 
-	if [ $merge_from_feature -eq 1 -eq 1 ]; then
+	if [ $merge_from_feature -eq 1 ]; then
 		print_action 'Checkout feature branch'
 		git show-branch $feature > /dev/null 2>&1
 		# git returns 128 if branch does not exist
@@ -263,7 +263,7 @@ if [ $result -eq 0 ]; then
 		fi
 		print_ok
 
-		if [ $run_npm_build ]; then
+		if [ $run_npm_build -eq 1 ]; then
 			print_action 'Merging feature'
 			git merge release > /dev/null 2>&1
 			if [ $? -eq 1 ]; then
