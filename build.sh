@@ -7,13 +7,16 @@ LIGHT_GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No color
 
-VERSION='1.2.1'
+VERSION='1.2.2'
 
 push=0
 merge_from_feature=0
 run_npm_build=0
 commit_msg='ADDED: new build'
 checkout_after_done=0
+
+GIT_MERGE_AUTOEDIT=no
+export GIT_MERGE_AUTOEDIT
 
 
 help=$(cat <<-END
