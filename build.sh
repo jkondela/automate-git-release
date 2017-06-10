@@ -14,6 +14,8 @@ merge_from_feature=0
 run_npm_build=0
 commit_msg='ADDED: new build'
 checkout_after_done=0
+tag=''
+has_tag=0
 
 GIT_MERGE_AUTOEDIT=no
 export GIT_MERGE_AUTOEDIT
@@ -30,14 +32,15 @@ Automate GIT release\n
 \r\n${LIGHT_GREEN}-r [npm-script-name] ${NC}   script name from npm scripts for run (example: build = npm run build)
 \r\n${LIGHT_GREEN}-c [commit-message] ${NC} message for commit if release branch is active (runnable only with -r command)
 \r\n${LIGHT_GREEN}-n [branch-name] ${NC} after build checkout to [branch-name], if does not exist, it will be firstly created
+\r\n${LIGHT_GREEN}-t [tag] ${NC} creates lightweight tag
 \r\n\nExample:
 \r\n${LIGHT_GREEN}./build.sh -p -f feature/checkout -r build$NC
 \r\nThis firstly does merge of branch 'feature/checkout' to develop,
-\r\nrun 'npm run build'' and push to server
+\r\nrun 'npm run build' and push to server
 END
 )
 
-while getopts ":phf:r:c:vn:" opt; do
+while getopts ":phf:r:c:vn:t:" opt; do
 	case $opt in
 		p)
 			push=1
@@ -64,6 +67,9 @@ while getopts ":phf:r:c:vn:" opt; do
 		n)
 			checkout_after_done=1
 			checkout_branch_after_done=$OPTARG
+			;;
+		t)
+			tag=$OPTARG
 			;;
 		?)
 			echo -e "${RED}Invalid command '$OPTARG'. Run with -h to see help${NC}"
@@ -175,6 +181,28 @@ perform_checkout_with_create() {
 		print_ok
 		return 0
 	fi
+}
+
+
+set_master_tag() {
+	if [ "$1" != '' ]; then
+		print_action "Creating tag '${tag}'"
+		git tag $tag > /dev/null 2>&1
+		local result=$? # 128 if tag exists
+
+		if [ $result -eq 0 ]; then
+			has_tag=1
+			print_ok
+			return 0
+		else
+			print_error
+
+			if [ $result -eq 128 ]; then
+				echo -e "${RED}Tag '${tag} already exists$NC"
+			fi
+		fi
+	fi
+	return 1
 }
 
 
@@ -294,9 +322,17 @@ if [ $result -eq 0 ]; then
 		exit
 	fi
 
+	set_master_tag $tag
+
 	if [ $push -eq 1 ]; then
 		print_action "Pushing to master and develop"
-		git push origin master develop > /dev/null 2>&1
+
+		if [ $has_tag -eq 1 ]; then
+			git push origin master develop --tags > /dev/null 2>&1
+		else
+			git push origin master develop > /dev/null 2>&1
+		fi
+
 
 		# git returns 128 if error occured
 		if [ $? -eq 128 ]; then

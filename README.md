@@ -17,7 +17,7 @@ There is no need to add script to your ``.gitignore`` because with first run it 
 
 ### Usage
 ```sh
-$ ./build.sh -p -f {BRANCH_NAME} -r build
+$ ./build.sh -p -t v1.5.0 -f {BRANCH_NAME} -r build
 ```
 See below for explain each command.
 
@@ -26,7 +26,7 @@ See below for explain each command.
 
 ```sh
 $ ./build.sh -v
-$ 1.2.0
+$ 1.2.2
 ```
 
 ```sh
@@ -55,6 +55,11 @@ $ ./build.sh -n [branch-name]
 # after successful build checkout to [branch-name]
 # if does not exist, it will be firstly created
 ```
+
+```sh
+$ ./build.sh -t [tag] # creates lightweight tag on master and push it to remote
+```
+
 
 ### Contributing
 Create [new issue](https://github.com/jkondela/automate-git-release/issues/new).
