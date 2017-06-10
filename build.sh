@@ -188,10 +188,12 @@ result=$?
 if [ $result -eq 0 ]; then
 	echo -e "${LIGHT_GREEN}Starting release${NC}"
 
-	if git show-branch release > /dev/null 2>&1; then
-		print_action 'Removing existing release branch'
-		git branch -D release > /dev/null 2>&1
-		print_ok
+	if [ $run_npm_build -eq 1 ]; then
+		if git show-branch release > /dev/null 2>&1; then
+			print_action 'Removing existing release branch'
+			git branch -D release > /dev/null 2>&1
+			print_ok
+		fi
 	fi
 
 	if [ $merge_from_feature -eq 1 ]; then
