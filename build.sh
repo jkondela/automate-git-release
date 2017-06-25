@@ -1,11 +1,15 @@
 #!/bin/bash
-# Author Jaroslav Kondela
+
+#
+# Automate GIT release
+# Author Jaroslav Kondela <jkondela@outlook.sk>
 # License MIT 2017 Jaroslav Kondela
+#
 
 # constants
 LIGHT_GREEN='\033[0;32m'
 RED='\033[0;31m'
-NC='\033[0m' # No color
+NC='\033[0m' # no color
 
 VERSION='1.2.2'
 
@@ -17,86 +21,244 @@ checkout_after_done=0
 tag=''
 has_tag=0
 
-GIT_MERGE_AUTOEDIT=no
-export GIT_MERGE_AUTOEDIT
+
+parse_args() {
+	while getopts ":phf:r:c:vn:t:" opt; do
+		case $opt in
+			p)
+				push=1
+				;;
+			h)
+				usage
+				;;
+			v)
+				echo $VERSION
+				exit
+				;;
+			f)
+				merge_from_feature=1
+				feature=${OPTARG}
+				;;
+			r)
+				run_npm_build=1
+				npm_script="npm run $OPTARG > /dev/null 2>&1"
+				;;
+			c)
+				commit_msg=$OPTARG
+				;;
+			n)
+				checkout_after_done=1
+				checkout_branch_after_done=$OPTARG
+				;;
+			t)
+				tag=$OPTARG
+				;;
+			?)
+				echo -e "${RED}Invalid command '$OPTARG'. Run with -h to see help${NC}"
+				exit 1
+				;;
+		esac
+	done
+}
 
 
-help=$(cat <<-END
-Automate GIT release\n
-\rversion ${VERSION}\n\n
-\rCommands:
-\r\n${LIGHT_GREEN}-v${NC} for version
-\r\n${LIGHT_GREEN}-h${NC} for help
-\r\n${LIGHT_GREEN}-p${NC} for push master/develop to server
-\r\n${LIGHT_GREEN}-f [branch-name] ${NC} for merge feature branch to develop
-\r\n${LIGHT_GREEN}-r [npm-script-name] ${NC}   script name from npm scripts for run (example: build = npm run build)
-\r\n${LIGHT_GREEN}-c [commit-message] ${NC} message for commit if release branch is active (runnable only with -r command)
-\r\n${LIGHT_GREEN}-n [branch-name] ${NC} after build checkout to [branch-name], if does not exist, it will be firstly created
-\r\n${LIGHT_GREEN}-t [tag] ${NC} creates lightweight tag
-\r\n\nExample:
-\r\n${LIGHT_GREEN}./build.sh -p -f feature/checkout -r build$NC
-\r\nThis firstly does merge of branch 'feature/checkout' to develop,
-\r\nrun 'npm run build' and push to server
-END
-)
 
-while getopts ":phf:r:c:vn:t:" opt; do
-	case $opt in
-		p)
-			push=1
-			;;
-		h)
-			echo -e $help
+init() {
+	GIT_MERGE_AUTOEDIT=no
+	export GIT_MERGE_AUTOEDIT
+	
+	echo -e "${LIGHT_GREEN}Preparing...$NC"
+
+	check_git_bin
+	require_repo
+
+	
+	# run before verify clean working copy 
+	# because of first run installation of gitignore
+	check_ignore_self 1
+
+	verify_clean_working_tree
+	local result=$?
+		
+	if [ $result -eq 0 ]; then
+		echo -e "${LIGHT_GREEN}Starting release${NC}"
+
+		if [ $run_npm_build -eq 1 ]; then
+			if git show-branch release > /dev/null 2>&1; then
+				print_action 'Removing existing release branch'
+				git branch -D release > /dev/null 2>&1
+				print_ok
+			fi
+		fi
+
+		if [ $merge_from_feature -eq 1 ]; then
+			print_action 'Checkout feature branch'
+			git show-branch $feature > /dev/null 2>&1
+			# git returns 128 if branch does not exist
+			if [ $? -eq 128 ]; then
+				print_error
+				echo -e "${RED}Feature branch '${feature} does no exists'$NC"
+				exit
+			fi
+			print_ok
+			git checkout $feature > /dev/null 2>&1
+			check_ignore_self
+		fi
+		
+		git checkout develop > /dev/null 2>&1
+		check_ignore_self
+
+		print_action 'Pulling develop'
+		git pull origin develop > /dev/null 2>&1
+		if [ $? -eq 1 ]; then
+			print_error
+			echo -e "${RED}\nError occured when pulling from server (possible merge conflicts) - resolve manualy${NC}"
 			exit
-			;;
-		v)
-			echo $VERSION
+		fi
+		print_ok
+
+		if [ $merge_from_feature -eq 1 ]; then
+			print_action 'Merging feature'
+			git merge $feature > /dev/null 2>&1
+			if [ $? -eq 1 ]; then
+				print_error
+				echo -e "${RED}\nError occured - possible merge conflicts${NC}"
+			fi
+			print_ok
+		fi
+		
+		if [ $run_npm_build -eq 1 ]; then
+			git checkout -b release > /dev/null 2>&1
+
+			print_action "Running npm script"
+			eval $npm_script
+			if [ $? -eq 1 ]; then
+				print_error
+				echo -e "${RED}Error occured when running '$npm_script'$NC"
+				exit
+			fi
+
+			print_ok
+
+			print_action 'Staging changes from build'
+			print_ok
+			git add . > /dev/null 2>&1
+			commit_cmd="git commit -m '$commit_msg' > /dev/null 2>&1"
+			print_action 'Commiting npm build'
+			eval $commit_cmd
+			print_ok
+		fi
+		
+		
+		git checkout master > /dev/null 2>&1
+		check_ignore_self
+		if [ $? -eq 0 ]; then
+
+			print_action 'Pulling master'
+			git pull origin master > /dev/null 2>&1
+			if [ $? -eq 1 ]; then
+				print_error
+				echo -e "${RED}\nError occured when pulling from server (possible merge conflicts) - resolve manualy${NC}"
+				exit
+			fi
+			print_ok
+
+			if [ $run_npm_build -eq 1 ]; then
+				print_action 'Merging feature'
+				git merge release > /dev/null 2>&1
+				if [ $? -eq 1 ]; then
+					print_error
+					echo -e "${RED}\nError occured - possible merge conflicts${NC}"
+					exit
+				fi
+				print_ok
+
+				git checkout develop > /dev/null 2>&1
+
+				git merge release > /dev/null 2>&1
+				if [ $? -eq 0 ]; then
+					git branch -D release > /dev/null 2>&1
+				else
+					echo -e "${RED}\nError occured - possible merge conflicts${NC}"
+					exit
+				fi
+			fi
+
+		else
+			echo -e "${RED}\nError occured${NC}"
 			exit
-			;;
-		f)
-			merge_from_feature=1
-			feature=${OPTARG}
-			;;
-		r)
-			run_npm_build=1
-			npm_script="npm run $OPTARG > /dev/null 2>&1"
-			;;
-		c)
-			commit_msg=$OPTARG
-			;;
-		n)
-			checkout_after_done=1
-			checkout_branch_after_done=$OPTARG
-			;;
-		t)
-			tag=$OPTARG
-			;;
-		?)
-			echo -e "${RED}Invalid command '$OPTARG'. Run with -h to see help${NC}"
-			exit
-			;;
-	esac
-done
+		fi
+
+		set_master_tag $tag
+
+		if [ $push -eq 1 ]; then
+			print_action "Pushing to master and develop"
+
+			if [ $has_tag -eq 1 ]; then
+				git push origin master develop --tags > /dev/null 2>&1
+			else
+				git push origin master develop > /dev/null 2>&1
+			fi
 
 
-echo -e "${LIGHT_GREEN}Preparing...$NC"
+			# git returns 128 if error occured
+			if [ $? -eq 128 ]; then
+				print_error
+				echo -e "${RED}Pushing was not successfully\n\nDone with errors!${NC}"
+				exit 1
+			fi
+			print_ok
+		fi
+
+		if [ $checkout_after_done -eq 1 ]; then
+			perform_checkout_with_create $checkout_branch_after_done
+		fi
 
 
-check_git() {
-	which --skip-functions --skip-alias git >/dev/null 2>&1
-	if [ $? -eq 1 ]; then
-		echo -e "${RED}Git was not found in PATH.\nPlease, firstly install git from https://git-scm.com/downloads${NC}"		
-		exit
+		echo -e "${LIGHT_GREEN}Done!$NC"
+		exit 0
 	fi
 }
 
-check_git
 
+check_git_bin() {
+	which --skip-functions --skip-alias git >/dev/null 2>&1
+	if [ $? -eq 1 ]; then
+		echo -e "${RED}Git was not found in PATH.\nPlease, firstly install git from https://git-scm.com/downloads${NC}"		
+		exit 1
+	fi
+}
 
-if ! git rev-parse --git-dir >/dev/null 2>&1; then
-	echo -e "${RED}There is no git repo. Aborting...${NC}"
+require_repo() {
+	if ! git rev-parse --git-dir >/dev/null 2>&1; then
+		echo -e "${RED}There is no git repo. Aborting...${NC}"
+		exit 1
+	fi
+}
+
+usage() {
+	help=$(cat <<-END
+	Automate GIT release\n
+		\rversion ${VERSION}\n\n
+		\rCommands:
+		\r\n${LIGHT_GREEN}-v${NC} for version
+		\r\n${LIGHT_GREEN}-h${NC} for help
+		\r\n${LIGHT_GREEN}-p${NC} for push master/develop to server
+		\r\n${LIGHT_GREEN}-f [branch-name] ${NC} for merge feature branch to develop
+		\r\n${LIGHT_GREEN}-r [npm-script-name] ${NC}   script name from npm scripts for run (example: build = npm run build)
+		\r\n${LIGHT_GREEN}-c [commit-message] ${NC} message for commit if release branch is active (runnable only with -r command)
+		\r\n${LIGHT_GREEN}-n [branch-name] ${NC} after build checkout to [branch-name], if does not exist, it will be firstly created
+		\r\n${LIGHT_GREEN}-t [tag] ${NC} creates lightweight tag
+		\r\n\nExample:
+		\r\n${LIGHT_GREEN}./build.sh -p -f feature/checkout -r build$NC
+		\r\nThis firstly does merge of branch 'feature/checkout' to develop,
+		\r\nrun 'npm run build' and push to server
+	END
+	)
+
+	echo -e $help
 	exit
-fi
+}
 
 
 my_name=$(basename "$0")
@@ -206,147 +368,6 @@ set_master_tag() {
 }
 
 
-# run before verify clean working copy 
-# because of first run installation of gitignore
-check_ignore_self 1
-
-verify_clean_working_tree
-result=$?
-
-if [ $result -eq 0 ]; then
-	echo -e "${LIGHT_GREEN}Starting release${NC}"
-
-	if [ $run_npm_build -eq 1 ]; then
-		if git show-branch release > /dev/null 2>&1; then
-			print_action 'Removing existing release branch'
-			git branch -D release > /dev/null 2>&1
-			print_ok
-		fi
-	fi
-
-	if [ $merge_from_feature -eq 1 ]; then
-		print_action 'Checkout feature branch'
-		git show-branch $feature > /dev/null 2>&1
-		# git returns 128 if branch does not exist
-		if [ $? -eq 128 ]; then
-			print_error
-			echo -e "${RED}Feature branch '${feature} does no exists'$NC"
-			exit
-		fi
-		print_ok
-		git checkout $feature > /dev/null 2>&1
-		check_ignore_self
-	fi
-	
-	git checkout develop > /dev/null 2>&1
-	check_ignore_self
-
-	print_action 'Pulling develop'
-	git pull origin develop > /dev/null 2>&1
-	if [ $? -eq 1 ]; then
-		print_error
-		echo -e "${RED}\nError occured when pulling from server (possible merge conflicts) - resolve manualy${NC}"
-		exit
-	fi
-	print_ok
-
-	if [ $merge_from_feature -eq 1 ]; then
-		print_action 'Merging feature'
-		git merge $feature > /dev/null 2>&1
-		if [ $? -eq 1 ]; then
-			print_error
-			echo -e "${RED}\nError occured - possible merge conflicts${NC}"
-		fi
-		print_ok
-	fi
-	
-	if [ $run_npm_build -eq 1 ]; then
-		git checkout -b release > /dev/null 2>&1
-
-		print_action "Running npm script"
-		eval $npm_script
-		if [ $? -eq 1 ]; then
-			print_error
-			echo -e "${RED}Error occured when running '$npm_script'$NC"
-			exit
-		fi
-
-		print_ok
-
-		print_action 'Staging changes from build'
-		print_ok
-		git add . > /dev/null 2>&1
-		commit_cmd="git commit -m '$commit_msg' > /dev/null 2>&1"
-		print_action 'Commiting npm build'
-		eval $commit_cmd
-		print_ok
-	fi
-	
-	
-	git checkout master > /dev/null 2>&1
-	check_ignore_self
-	if [ $? -eq 0 ]; then
-
-		print_action 'Pulling master'
-		git pull origin master > /dev/null 2>&1
-		if [ $? -eq 1 ]; then
-			print_error
-			echo -e "${RED}\nError occured when pulling from server (possible merge conflicts) - resolve manualy${NC}"
-			exit
-		fi
-		print_ok
-
-		if [ $run_npm_build -eq 1 ]; then
-			print_action 'Merging feature'
-			git merge release > /dev/null 2>&1
-			if [ $? -eq 1 ]; then
-				print_error
-				echo -e "${RED}\nError occured - possible merge conflicts${NC}"
-				exit
-			fi
-			print_ok
-
-			git checkout develop > /dev/null 2>&1
-
-			git merge release > /dev/null 2>&1
-			if [ $? -eq 0 ]; then
-				git branch -D release > /dev/null 2>&1
-			else
-				echo -e "${RED}\nError occured - possible merge conflicts${NC}"
-				exit
-			fi
-		fi
-
-	else
-		echo -e "${RED}\nError occured${NC}"
-		exit
-	fi
-
-	set_master_tag $tag
-
-	if [ $push -eq 1 ]; then
-		print_action "Pushing to master and develop"
-
-		if [ $has_tag -eq 1 ]; then
-			git push origin master develop --tags > /dev/null 2>&1
-		else
-			git push origin master develop > /dev/null 2>&1
-		fi
-
-
-		# git returns 128 if error occured
-		if [ $? -eq 128 ]; then
-			print_error
-			echo -e "${RED}Pushing was not successfully\n\nDone with errors!${NC}"
-			exit
-		fi
-		print_ok
-	fi
-
-	if [ $checkout_after_done -eq 1 ]; then
-		perform_checkout_with_create $checkout_branch_after_done
-	fi
-
-
-	echo -e "${LIGHT_GREEN}Done!$NC"
-fi
+# it starts right here
+parse_args "$@"
+init
