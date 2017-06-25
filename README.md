@@ -17,7 +17,7 @@ There is no need to add script to your ``.gitignore`` because with first run it 
 
 ### Usage
 ```sh
-$ ./build.sh -p -t v1.5.0 -f {BRANCH_NAME} -r build
+$ ./build.sh -p -t v1.4.0 -f {BRANCH_NAME} -r build
 ```
 See below for explain each command.
 

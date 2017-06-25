@@ -11,7 +11,7 @@ LIGHT_GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # no color
 
-VERSION='1.2.2'
+VERSION='1.4.0'
 
 push=0
 merge_from_feature=0
